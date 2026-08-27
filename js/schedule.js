@@ -1,0 +1,8 @@
+(() => {
+  const sb = window.supabase?.createClient?.(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+  const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const date=d=>new Date(d).toLocaleDateString('en-LK',{day:'2-digit',month:'short',year:'numeric'});
+  const time=d=>new Date(d).toLocaleTimeString('en-LK',{hour:'numeric',minute:'2-digit'});
+  async function run(){const box=document.querySelector('#schedule-box-full');if(!box||!sb)return;const {data:{session}}=await sb.auth.getSession();if(!session)return;const {data:access}=await sb.rpc('get_my_class_access');const active=(access||[]).filter(x=>x.active).map(x=>x.class_name);if(!active.length){box.innerHTML='<div class="empty-state">No active class access.</div>';return;}const {data}=await sb.from('class_schedule').select('*').in('class_name',active).gte('starts_at',new Date().toISOString()).order('starts_at',{ascending:true}).limit(20);box.innerHTML=(data||[]).map(x=>`<div class="schedule-card"><span class="eyebrow">${esc(x.class_name)}</span><h2>${esc(x.title)}</h2><p>${date(x.starts_at)} · ${time(x.starts_at)}${x.ends_at?' – '+time(x.ends_at):''}</p>${x.description?`<p>${esc(x.description)}</p>`:''}${x.zoom_url?`<a class="btn btn-primary" href="${esc(x.zoom_url)}" target="_blank" rel="noopener">Join Zoom ↗</a>`:''}</div>`).join('')||'<div class="empty-state">No upcoming classes scheduled yet.</div>';}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+})();
